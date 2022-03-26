@@ -1,5 +1,9 @@
 # Crockery Generator Tool
 
+
+https://user-images.githubusercontent.com/72556403/160245441-5664c8c5-6fe4-49a7-bb60-c667ffc8b356.mp4
+
+
 Crockery generator tool in Maya implemented in MEL. This tool can be used to generate piles of plates, bowls and cups.
 
 This script can be run by open or source the file in the Script Editor or save it in a shelf and click the icon.
