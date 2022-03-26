@@ -1,0 +1,290 @@
+// Kill the job that set up previously.
+scriptJob -killAll -force;
+if(!`namespace -exists "smooth"`)
+    namespace -add "smooth";
+// A function to create a new stack.
+global proc create()
+{
+    // Create a cylinder.
+    polyCylinder -name cylinder;
+    string $cylinder[] = `ls -sl`;
+    // Delete the top face.
+    delete ($cylinder[0]+".f[21]");
+    // Change the object to the default shape.
+    polyExtrudeFacet -ltz -0.1;
+    polyNormal -normalMode 0;
+    select -r $cylinder[0];
+    // Move the object up to sit on the plane. 
+    move -r 0 1 0 ;
+    // Move the scale pivot to the bottom so that the object always stay on the plane.
+    move -r 0 -1 0 ($cylinder[0]+".scalePivot");
+    // Change the namespace to "stack".
+    group -name stack:new $cylinder[0];
+    // Add attributes to the stack.
+    addAttr -longName height;
+    addAttr -longName bottom;
+    addAttr -longName top;
+    addAttr -longName num;
+    addAttr -longName spacing;
+    // Set the default values.
+    string $base[] = `ls -sl`;
+    setAttr ($base[0]+".height") 1;
+    setAttr ($base[0]+".bottom") 1;
+    setAttr ($base[0]+".top") 1;
+    setAttr ($base[0]+".num") 1;
+    setAttr ($base[0]+".spacing") 1;
+}
+
+// A funtion to change the height.
+global proc height()
+{
+    // Get the value from the slider.
+    float $height = `floatSliderGrp -q -value heightSlider`;
+    string $stack[] = `ls -sl`;
+    string $cylinder[] = `listRelatives`;
+    // Loop through the objects and change the height.
+    for($i=0; $i<size($cylinder); ++$i)
+    {
+        setAttr ($stack[0] + "|" + $cylinder[$i]+".scaleY") $height;
+    }
+    // Change the attribute value to the new value.
+    setAttr ($stack[0]+".height") $height;
+}
+
+// A function to change the bottom scale.
+global proc bottomScale()
+{
+    // Get the value from the slider.
+    float $bottom = `floatSliderGrp -q -value bottomSlider`;
+    string $stack[] = `ls -sl`;
+    // Get the previous value from the attribute.
+    float $currentBottom = `getAttr ($stack[0]+".bottom")`;
+    string $cylinder[] = `listRelatives`;
+    // Loop through the objects, select the bottom faces and scale them.
+    for($i=0; $i<size($cylinder); ++$i)
+    {
+        select -r ($stack[0] + "|" + $cylinder[$i]+".f[20]") ($stack[0] + "|" + $cylinder[$i]+".f[41]");
+        scale -r ($bottom/$currentBottom) 1 ($bottom/$currentBottom);
+    }
+    // Change the attribute value to the new value.
+    setAttr ($stack[0]+".bottom") $bottom;
+    // Kill the job, select the parents and set up the job again to avoid reopening the window.
+    scriptJob -killAll -force;
+    select $stack[0];
+    scriptJob -e "SelectionChanged" "selected()" -protected;
+}
+
+// A function to change the top scale.
+global proc topScale()
+{
+    // Get the value from the slider.
+    float $top = `floatSliderGrp -q -value topSlider`;
+    string $stack[] = `ls -sl`;
+    // Get the previous value from the attribute.
+    float $currentTop = `getAttr ($stack[0]+".top")`;
+    string $cylinder[] = `listRelatives`;
+    // Loop through the objects, select the bottom edges and scale them.
+    for($i=0; $i<size($cylinder); ++$i)
+    {
+        select -r ($stack[0] + "|" + $cylinder[$i]+".e[20:39]") ($stack[0] + "|" + $cylinder[$i]+".e[64]") ($stack[0] + "|" + $cylinder[$i]+".e[69]") ($stack[0] + "|" + $cylinder[$i]+".e[73]") ($stack[0] + "|" + $cylinder[$i]+".e[77]") ($stack[0] + "|" + $cylinder[$i]+".e[81]") ($stack[0] + "|" + $cylinder[$i]+".e[85]") ($stack[0] + "|" + $cylinder[$i]+".e[89]") ($stack[0] + "|" + $cylinder[$i]+".e[93]") ($stack[0] + "|" + $cylinder[$i]+".e[97]") ($stack[0] + "|" + $cylinder[$i]+".e[101]") ($stack[0] + "|" + $cylinder[$i]+".e[105]") ($stack[0] + "|" + $cylinder[$i]+".e[109]") ($stack[0] + "|" + $cylinder[$i]+".e[113]") ($stack[0] + "|" + $cylinder[$i]+".e[117]") ($stack[0] + "|" + $cylinder[$i]+".e[121]") ($stack[0] + "|" + $cylinder[$i]+".e[125]") ($stack[0] + "|" + $cylinder[$i]+".e[129]") ($stack[0] + "|" + $cylinder[$i]+".e[133]") ($stack[0] + "|" + $cylinder[$i]+".e[137]") ($stack[0] + "|" + $cylinder[$i]+".e[139]");
+        scale -r ($top/$currentTop) 1 ($top/$currentTop);
+    }
+    // Change the attribute value to the new value.
+    setAttr ($stack[0]+".top") $top;
+    // Kill the job, select the parents and set up the job again to avoid reopening the window.
+    scriptJob -killAll -force;
+    select $stack[0];
+    scriptJob -e "SelectionChanged" "selected()" -protected;
+}
+
+// A function to change the number of objects in the stack.
+global proc stack()
+{
+    string $stack[] = `ls -sl`;
+    // Get the spacing value from the attribute.
+    float $currentSpacing = `getAttr ($stack[0]+".spacing")`;
+    string $cylinder[] = `listRelatives`;
+    // Delete previously duplicated objects.
+    for($i=1; $i<size($cylinder); ++$i)
+    {
+        delete ($stack[0] + "|" + $cylinder[$i]);
+    }
+    // Get the value from the slider.
+    float $num = `intSliderGrp -q -value numSlider`;
+    // Select the base object.
+    select ($stack[0] + "|" + $cylinder[0]);
+    // Duplicate and move it up by the spacing value.
+    for ($i=1; $i<$num; ++$i)
+    {
+        ShiftClickSmartDupe 1;
+        move -r 0 $currentSpacing 0 ;
+    }
+    // Change the attribute value to the new value.
+    setAttr ($stack[0]+".num") $num;
+    // Kill the job, select the parents and set up the job again to avoid reopening the window.
+    scriptJob -killAll -force;
+    select $stack[0];
+    scriptJob -e "SelectionChanged" "selected()" -protected;
+}
+
+// A function to change the spacing between each object in the stack.
+global proc spacing()
+{
+    string $stack[] = `ls -sl`;
+    string $cylinder[] = `listRelatives`;
+    // Get the value from the slider.
+    float $space = `floatSliderGrp -q -value spacingSlider`;
+    // Get the Y position of the base object.
+    float $base = `getAttr ($stack[0] + "|" + $cylinder[0]+".translateY")`;
+    // Loop through the objects in the stack and change the Y positions.
+    for ($i=1; $i<size($cylinder); ++$i)
+    {
+        setAttr ($stack[0] + "|" + $cylinder[$i]+".translateY") ($base + $i*$space);
+    }
+    // Change the attribute value to the new value.
+    setAttr ($stack[0]+".spacing") $space;
+}
+
+// A function to smooth the objects.
+global proc smooth()
+{
+    string $stack[] = `ls -sl`;
+    string $cylinder[] = `listRelatives`;
+    // Loop through the objects in the stack and remesh, smoooth and retopologise.
+    for($i=0; $i<size($cylinder); ++$i)
+    {
+        $cyl =  $stack[0] + "|" + $cylinder[$i];
+        polyRemesh $cyl;
+        polySmooth $cyl;
+        polyRetopo -constructionHistory 1 -replaceOriginal 1 -preserveHardEdges 0 -topologyRegularity 0.5 -faceUniformity 0 -anisotropy 0.75 -targetFaceCount 1000 -targetFaceCountTolerance 10 $cyl;
+    };
+    // Change the namespace.
+    int $len = size($stack[0]);
+    string $name = `substring $stack[0] 7 $len`;
+    string $newname = "smooth:"+$name;
+    rename $stack[0] $newname;
+}
+
+// A function to redo the smooth operation.
+global proc resmooth()
+{
+    string $stack[] = `ls -sl`;
+    // Store the attribute values.
+    float $height = `getAttr ($stack[0]+".height")`;
+    float $bottom = `getAttr ($stack[0]+".bottom")`;
+    float $top = `getAttr ($stack[0]+".top")`;
+    int $num = `getAttr ($stack[0]+".num")`;
+    float $space = `getAttr ($stack[0]+".spacing")`;
+    // Store the position.
+    float $transX = `getAttr ($stack[0]+".translateX")`;
+    float $transY = `getAttr ($stack[0]+".translateY")`;
+    float $transZ = `getAttr ($stack[0]+".translateZ")`;
+    // Store the name.
+    int $len = size($stack[0]);
+    string $name = `substring $stack[0] 8 $len`;
+    // Remove the stack.
+    delete $stack[0];
+    // Create a new stack.
+    create();
+    // Move the new stack to the stored position.
+    move $transX $transY $transZ;
+    // Create a GUI window.
+    showMyWindow();
+
+    string $stack[] = `ls -sl`;
+    // Rename the stack to the stored name.
+    string $newname = "stack:"+$name;
+    rename $stack[0] $newname;
+
+    // Change the slider values.
+    floatSliderGrp -e -value $height heightSlider;
+    floatSliderGrp -e -value $bottom bottomSlider;
+    floatSliderGrp -e -value $top topSlider;
+    intSliderGrp -e -value $num numSlider;
+    floatSliderGrp -e -value $space spacingSlider;
+
+    // Operate the functions to recreate the stack.
+    height();
+    bottomScale();
+    topScale();
+    stack();
+    spacing();
+    // Display the GUI window.
+    showMyWindow();
+}
+
+// A function to display GUI window.
+global proc showMyWindow()
+{
+    // Delete the current window.
+    if(`window -exists myWindow`)
+        deleteUI myWindow;
+
+    // Create a new window with one column.
+    window -title "Plates Generator" -resizeToFitChildren true myWindow;
+    columnLayout -adjustableColumn true -columnAttach "both" 30 -rowSpacing 10;
+    // Create a button to call "create" funtion on click.
+    button -label "Create New" -command "create();";
+    // Get the current selection.
+    string $stack[] = `ls -sl`;
+
+    // If something is selected, add components to the window.
+    if(size($stack)>0)
+    {
+        // If the selected object has a parent, select the parent.
+        $parent = `listRelatives -parent $stack[0]`;
+        if(size($parent)>0)
+        {
+            $stack = $parent;
+            select -r $stack[0];
+        }
+
+        // Add components to the window if the namespace is "stack".
+        $ns = `substring $stack[0] 1 6`;
+        if($ns == "stack:" || $ns == "smooth")
+        {
+            // get the children and attributes.
+            string $cylinder[] = `listRelatives`;
+            float $currentHeight = `getAttr ($stack[0]+".height")`;
+            float $currentBottom = `getAttr ($stack[0]+".bottom")`;
+            float $currentTop = `getAttr ($stack[0]+".top")`;
+            int $currentNum = `getAttr ($stack[0]+".num")`;
+            float $currentSpacing = `getAttr ($stack[0]+".spacing")`;
+            // Add name field.
+            nameField -object $stack[0];
+            // Add slider groups to controls the attributes of the stack. These call functions both on drag and on change.
+            floatSliderGrp -label "Height" -value $currentHeight -field true -minValue 0.1 -maxValue 10 -fieldMaxValue 100 -fieldMinValue 0.1 -dragCommand "height()" -changeCommand "height()" heightSlider;
+            // Hide "Bottom Scale" and "Top Scale" sliders for smoothed objects.
+            if($ns == "stack:")
+            {
+                floatSliderGrp -label "Bottom Scale" -value $currentBottom -field true -minValue 0.1 -maxValue 10 -fieldMaxValue 10 -fieldMinValue 0.1 -dragCommand "bottomScale()" -changeCommand "bottomScale()" bottomSlider;
+                floatSliderGrp -label "Top Scale" -value $currentTop -field true -minValue 0.1 -maxValue 10 -fieldMaxValue 100 -fieldMinValue 0.1 -dragCommand "topScale()" -changeCommand "topScale()" topSlider;
+            }
+            intSliderGrp -label "Number of Plates" -value $currentNum -field true -minValue 1 -maxValue 10 -fieldMaxValue 100 -fieldMinValue 0 -dragCommand "stack()" -changeCommand "stack()" numSlider;
+            floatSliderGrp -label "Spacing" -value $currentSpacing -field true -minValue 0.1 -maxValue 5 -fieldMaxValue 100 -fieldMinValue 0.1 -dragCommand "spacing()" -changeCommand "spacing()" spacingSlider;
+            // Add a button to smooth for non-smoothed objects.
+            if($ns == "stack:")
+                button -label "Smooth" -command "smooth();";
+            // Add a button to redo smooth for smoothed objects.
+            if($ns == "smooth")
+                button -label "Redo Smooth" -command "resmooth();";
+        }
+    }
+    // Display the window.
+    showWindow myWindow;
+}
+
+// Call "showMyWindow" when script is run.
+showMyWindow();
+
+// A function to run "showMyWindow" function if the window is already opened.
+global proc selected()
+{
+    // Check if the window exists and call "showMyWindow" function.
+    if (`window -exists myWindow`)
+        showMyWindow();
+}
+
+// Set up a job for calling "selected" function when the selection changed.
+scriptJob -e "SelectionChanged" "selected()" -protected;
+
